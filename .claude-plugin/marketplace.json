@@ -1,0 +1,24 @@
+{
+  "name": "mascah",
+  "owner": {
+    "name": "Mike Ascah",
+    "url": "https://github.com/mascah"
+  },
+  "description": "Mike Ascah's plugins and mods for Claude Code.",
+  "plugins": [
+    {
+      "name": "mascah-skills",
+      "source": { "source": "github", "repo": "mascah/skills" },
+      "description": "Personal engineering skills: discover, shape, specify and implement with proportionate verification.",
+      "category": "engineering",
+      "keywords": ["knowledge", "planning", "workflow", "skills"]
+    },
+    {
+      "name": "visual-recap",
+      "source": { "source": "github", "repo": "mascah/visual-recap" },
+      "description": "Live view of where the agent spends its time, plus a running summary timeline of the session.",
+      "category": "productivity",
+      "keywords": ["mod", "timeline", "time-tracking", "ui"]
+    }
+  ]
+}
