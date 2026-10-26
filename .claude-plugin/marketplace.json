@@ -19,6 +19,13 @@
       "description": "Live view of where the agent spends its time, plus a running summary timeline of the session.",
       "category": "productivity",
       "keywords": ["mod", "timeline", "time-tracking", "ui"]
+    },
+    {
+      "name": "codex-review",
+      "source": "./plugins/codex-review",
+      "description": "Iterative adversarial review of a spec, plan, or code diff via the Codex CLI. Confirms each change with you unless asked to auto-resolve.",
+      "category": "engineering",
+      "keywords": ["review", "codex", "adversarial"]
     }
   ]
 }

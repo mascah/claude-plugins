@@ -1,0 +1,10 @@
+{
+  "name": "codex-review",
+  "description": "Iterative adversarial review of a spec, plan, or code diff via the Codex CLI. Confirms each change with you unless asked to auto-resolve.",
+  "author": {
+    "name": "Mike Ascah",
+    "url": "https://github.com/mascah"
+  },
+  "repository": "https://github.com/mascah/claude-plugins",
+  "keywords": ["review", "codex", "adversarial"]
+}
