@@ -3,7 +3,7 @@ name: codex-review
 description: Iterative adversarial review of a spec, plan, design doc, or the current code diff using the Codex CLI. Keeps one Codex session across rounds, focuses on high/medium-severity issues, and confirms proposed changes with the user before applying them unless asked to auto-resolve. Use when asked for a codex review, second opinion, or adversarial review.
 ---
 
-Argument: a file path (spec, plan, any doc), or `diff` for the working tree. All Codex calls are read-only; Codex never edits anything. Work in `$TMPDIR/codex-review/` (create it).
+Argument: a file path (spec, plan, any doc), or `diff` for the working tree. All Codex calls are read-only; Codex never edits anything. Work in a fresh per-run directory so concurrent reviews never collide: run `mktemp -d "${TMPDIR:-/tmp}/codex-review.XXXXXX"` once, and use the printed path literally as `<dir>` in every later command (shell variables don't persist between calls). Never reuse another run's directory or thread id.
 
 **Mode.** Default is **confirm**: never edit the doc/code until the user approves that round's decisions. Use **auto** only if the user explicitly asks ("auto", "fix everything", "resolve all without asking"), at the start or mid-review. In auto, apply your own recommendations and still show the table each round.
 
@@ -12,8 +12,8 @@ Argument: a file path (spec, plan, any doc), or `diff` for the working tree. All
 ## Model
 
 Model and effort live in `~/.codex/review.config.toml` (a Codex profile). Round 1 passes `-p review`. `resume` ignores profiles and silently falls back to the user's default model, so every resume must pass the same values explicitly: read them once with
-`CX_MODEL=$(sed -n 's/^model = "\(.*\)"/\1/p' ~/.codex/review.config.toml); CX_EFFORT=$(sed -n 's/^model_reasoning_effort = "\(.*\)"/\1/p' ~/.codex/review.config.toml)`
-and add `-m $CX_MODEL -c model_reasoning_effort=$CX_EFFORT` to each resume. If the user names a different model for this review, use that instead of the profile.
+`sed -n 's/^model = "\(.*\)"/\1/p; s/^model_reasoning_effort = "\(.*\)"/\1/p' ~/.codex/review.config.toml` (prints model, then effort)
+and add `-m <model> -c model_reasoning_effort=<effort>` to each resume, with the printed values written in literally (shell variables don't persist between calls). If the user names a different model for this review, use that instead of the profile.
 
 If `~/.codex/review.config.toml` doesn't exist, drop `-p review`, `-m` and `-c` everywhere so every round uses the Codex defaults, and tell the user once.
 
@@ -21,14 +21,14 @@ If `~/.codex/review.config.toml` doesn't exist, drop `-p review`, `-m` and `-c` 
 
 Doc:
 ```bash
-cat <path> | codex exec -p review -s read-only --skip-git-repo-check --json -o $TMPDIR/codex-review/r1.md \
-  "Adversarially review this document. Find issues that matter: gaps, contradictions, unstated assumptions, edge cases likely to occur in practice, scope risks. For each issue give: number, severity (high/medium/low), the concrete scenario where it fails, and the smallest fix. Severity: high = breaks in normal use, or any security/data-loss/corruption risk; medium = realistic failure under plausible conditions, or a gap that blocks implementation; low = rare or contrived edge case, hardening, style, nice-to-have. List high and medium in full, most important first. Put low items last under 'Minor', one line each, max 5. Do not propose abstractions, configuration, or defensive code for unlikely scenarios. Do not restate the document. If there are no high or medium issues, end your reply with the line: NO_OPEN_ISSUES" > $TMPDIR/codex-review/events.jsonl
+cat <path> | codex exec -p review -s read-only --skip-git-repo-check --json -o <dir>/r1.md \
+  "Adversarially review this document. Find issues that matter: gaps, contradictions, unstated assumptions, edge cases likely to occur in practice, scope risks. For each issue give: number, severity (high/medium/low), the concrete scenario where it fails, and the smallest fix. Severity: high = breaks in normal use, or any security/data-loss/corruption risk; medium = realistic failure under plausible conditions, or a gap that blocks implementation; low = rare or contrived edge case, hardening, style, nice-to-have. List high and medium in full, most important first. Put low items last under 'Minor', one line each, max 5. Do not propose abstractions, configuration, or defensive code for unlikely scenarios. Do not restate the document. If there are no high or medium issues, end your reply with the line: NO_OPEN_ISSUES" > <dir>/events.jsonl
 ```
 Diff: same command, but feed `git diff HEAD` (plus untracked files) on stdin and say "review these code changes" instead of "this document".
 
 If the user gave context (prototype vs production, stakes, what's out of scope), prepend it to the prompt as `Context: ...`.
 
-Capture the thread id: `grep -o '"thread_id":"[^"]*"' $TMPDIR/codex-review/events.jsonl | head -1`. Keep it for every later round. Read `r1.md`.
+Capture the thread id: `grep -o '"thread_id":"[^"]*"' <dir>/events.jsonl | head -1`. Keep it for every later round. Read `r1.md`.
 
 ## Triage (every round)
 
@@ -47,7 +47,7 @@ Then:
 
 ```bash
 { echo "Revised document below. Round <N>. Decisions on your previous issues:"; echo "<table: #, decision, reason>"; echo; echo "----- DOCUMENT -----"; cat <path>; } | \
-  codex exec resume <thread_id> -m $CX_MODEL -c model_reasoning_effort=$CX_EFFORT --skip-git-repo-check -o $TMPDIR/codex-review/r<N>.md \
+  codex exec resume <thread_id> -m <model> -c model_reasoning_effort=<effort> --skip-git-repo-check -o <dir>/r<N>.md \
   "Re-review. Raise only (a) NEW high/medium issues, including any introduced by the revisions, or (b) previously raised issues you still consider unresolved after my stated reasoning. Skips are deliberate decisions: drop them unless you can show a concrete high-severity scenario. Do not repeat or add Minor items. Same format. If no high or medium issues remain, reply: NO_OPEN_ISSUES"
 ```
 Diff: same, with the current diff in place of the document.
